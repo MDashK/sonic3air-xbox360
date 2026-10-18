@@ -1,10 +1,16 @@
 # Sonic 3 A.I.R. - Xbox 360 Port
 
 Original source code forked from: https://github.com/Eukaryot/sonic3air
+
 v26.03.28.0
 
 Source code will be uploaded on v1 release. Currently on beta phase.
+
 Xbox 360 is Big-Endian, so .bin files are provided alongside the XEX file.
+
+
+## Disclaimer
+* This port is AI assisted by Claude Opus.
 
 
 ## Requirements
