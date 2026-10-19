@@ -123,7 +123,7 @@ def main():
 # flags (tools/build_libc.py) and swap them in under the same member names.
 FILE_IO_DIR = os.path.join(os.path.dirname(HERE), "runtime", "rxdk_patched")
 FILE_IO_MEMBERS = {"fileio.c": "xbox_fileio.o", "dirio.c": "xbox_dirio.o"}
-FILE_IO_MARKER = b"s3air xdk-paths 1"
+FILE_IO_MARKER = b"s3air xdk-paths 3"	# 2: larger, thread-safe fd table; 3: __rxdk_fd_count
 
 def replace_file_io_in_libc(lib_dir, clang_bin, backup_dir):
 	libc = os.path.join(lib_dir, "libc.a")

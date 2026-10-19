@@ -138,6 +138,10 @@ namespace
 	{
 		X360ProcessSetup()
 		{
+			// Keep the log of the previous run (e.g. when restarting after a problem, its log would get lost otherwise)
+			DeleteFileA("game:\\s3air_previous.log");
+			MoveFileA("game:\\s3air.log", "game:\\s3air_previous.log");
+
 			static LogStreamBuf logBuffer("game:\\s3air.log");
 			gLogBuffer = &logBuffer;
 			std::cout.rdbuf(&logBuffer);

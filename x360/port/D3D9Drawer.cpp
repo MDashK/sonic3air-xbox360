@@ -45,6 +45,7 @@
 #include <unordered_map>
 
 extern "C" ULONG DbgPrint(const char* format, ...);
+extern "C" int __rxdk_fd_count(void);		// Number of open files, from the port's patched RXDK libc (runtime/rxdk_patched/fileio.c)
 
 
 namespace d3d9drawer
@@ -1080,6 +1081,15 @@ void D3D9Drawer::presentScreen()
 			std::cout << text << std::endl;		// Goes into game:\s3air.log
 		}
 		in.mPresentSeconds = 0.0;
+
+		// Number of open files, written whenever it grew noticeably (audio sources keep their files open, which once exhausted the runtime's file table)
+		static int lastLoggedOpenFiles = 0;
+		const int openFiles = __rxdk_fd_count();
+		if (openFiles >= lastLoggedOpenFiles + 8)
+		{
+			std::cout << "Open files: " << openFiles << std::endl;
+			lastLoggedOpenFiles = openFiles;
+		}
 	}
 
 	in.mFrameStarted = false;

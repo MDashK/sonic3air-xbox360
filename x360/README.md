@@ -297,6 +297,21 @@ Not touched (they are fine on BE): `Kosinski.cpp` (a logical transform of the va
 - In Xenia, the 43 mods are found and the active mods' scripts compile (the script step goes from 0.3 s to 3 s). Sprite mods apply (e.g. the "Sonic 3 Complete Sprites" rocks in AIZ).
 - "menu sprites" and "menu sprites - template" have invalid `mod.json` (line breaks inside strings), so they would fail on the PC as well. That's a problem with the mods, not the port.
 
+## Lost music and saves during play (19/10)
+
+**Symptom (hardware, music mods active):** after a few acts the BGM stopped (also in the following acts), and after restarting, the progress was lost.
+
+**Cause:** the RXDK runtime's file descriptor table had only 32 entries (29 usable, shared with directory handles), and was not thread-safe.
+- `OggAudioSource` opens its file in `load()` and keeps it open until the object is destroyed, and audio sources are never removed.
+- OGGs inside `audioremaster.bin` share the package's file, but the music mods are loose `.ogg` files (e.g. 61 + 16 + 17 in the active mods), and each one that ever played kept a descriptor.
+- Once the table was full, new music failed to open and `saveFile` failed to open the save files.
+
+**Fix:**
+- `runtime/rxdk_patched/fileio.c` (marker `s3air xdk-paths 3`; re-run `tools/fix_rxdk_ppc64.py`) now has **1024 slots** and serializes slot allocation and release with a spinlock.
+- It also exports `__rxdk_fd_count()`; the D3D9 drawer writes `Open files: N` to the log whenever the count grew by 8 or more.
+- `FileIO::saveFile` on the 360 logs a warning when a file can't be opened or fully written.
+- `game:\s3air.log` of the previous run is kept as `game:\s3air_previous.log`, so the log of a problem session survives a restart.
+
 ## Known toolchain behaviour (Phase 0)
 
 | Topic | Result |

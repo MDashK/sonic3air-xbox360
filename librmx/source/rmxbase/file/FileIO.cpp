@@ -461,7 +461,10 @@ namespace rmx
 		// Write the whole file at once with the POSIX functions: the runtime's stdio functions write in small blocks, which is very slow on the console
 		const int fileDescriptor = open(rmx::convertToUTF8(filename).c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
 		if (fileDescriptor < 0)
+		{
+			RMX_LOG_WARNING("Failed to open file for writing: " << rmx::convertToUTF8(filename));
 			return false;
+		}
 		size_t totalWritten = 0;
 		while (totalWritten < size && nullptr != data)
 		{
@@ -471,7 +474,12 @@ namespace rmx
 			totalWritten += (size_t)result;
 		}
 		::close(fileDescriptor);
-		return (totalWritten == size || nullptr == data);
+		if (totalWritten != size && nullptr != data)
+		{
+			RMX_LOG_WARNING("Failed to write file: " << rmx::convertToUTF8(filename) << " (" << totalWritten << " of " << size << " bytes written)");
+			return false;
+		}
+		return true;
 	#endif
 
 	#ifdef USE_UTF8_PATHS

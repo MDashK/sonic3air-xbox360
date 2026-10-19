@@ -104,7 +104,10 @@ extern NTSTATUS NtFlushBuffersFile(HANDLE h, IO_STATUS_BLOCK *iosb);
 /* ---- fd table -------------------------------------------------------------- */
 
 #define RXDK_FD_BASE 3
-#define RXDK_FD_MAX  32
+/* S3AIR X360 PATCH (2026-10-19): upstream has 32 slots (29 usable), shared with directory handles. The game keeps
+   a file open for every OGG audio source it has played (music mods are loose .ogg files), so they ran out during
+   play: new music failed to open (no BGM), and saving failed (progress lost). */
+#define RXDK_FD_MAX  1024
 
 typedef struct {
     HANDLE    handle;
@@ -115,11 +118,28 @@ typedef struct {
 
 static rxdk_ofd *fd_table[RXDK_FD_MAX];   /* NULL = free */
 
+/* S3AIR X360 PATCH (2026-10-19): the fd table is used from several threads (e.g. the game's audio streaming
+   thread opens files while the main thread does), so slot allocation and release are serialized */
+static volatile int fd_table_lock = 0;
+static void lock_fd_table(void)   { while (__sync_lock_test_and_set(&fd_table_lock, 1)) { while (fd_table_lock) {} } }
+static void unlock_fd_table(void) { __sync_lock_release(&fd_table_lock); }
+
 static int alloc_slot(rxdk_ofd *o) {
+    int result = -1;
+    lock_fd_table();
     for (int i = RXDK_FD_BASE; i < RXDK_FD_MAX; ++i)
-        if (!fd_table[i]) { fd_table[i] = o; return i; }
-    return -1;
+        if (!fd_table[i]) { fd_table[i] = o; result = i; break; }
+    unlock_fd_table();
+    return result;
 }
+/* S3AIR X360 PATCH (2026-10-19): number of open fds, for the game's diagnostics */
+int __rxdk_fd_count(void) {
+    int count = 0;
+    for (int i = RXDK_FD_BASE; i < RXDK_FD_MAX; ++i)
+        if (fd_table[i]) ++count;
+    return count;
+}
+
 static rxdk_ofd *get_fd(int fd) {
     return (fd < RXDK_FD_BASE || fd >= RXDK_FD_MAX) ? NULL : fd_table[fd];
 }
@@ -291,10 +311,13 @@ off_t lseek(int fd, off_t offset, int whence) {
 int close(int fd) {
     rxdk_ofd *o;
     if (fd >= 0 && fd < RXDK_FD_BASE) return 0;   /* console */
+    lock_fd_table();
     o = get_fd(fd);
-    if (!o) { errno = EBADF; return -1; }
+    if (!o) { unlock_fd_table(); errno = EBADF; return -1; }
     fd_table[fd] = NULL;
-    if (--o->refcount <= 0) {          /* last fd on this open-file description */
+    const int remaining = --o->refcount;
+    unlock_fd_table();
+    if (remaining <= 0) {              /* last fd on this open-file description */
         if (o->handle) NtClose(o->handle);
         free(o);
     }
@@ -558,4 +581,4 @@ int posix_fallocate(int fd, off_t offset, off_t len) {
 }
 
 /* Marker so fix_rxdk_ppc64.py can tell this patched object is already in libc.a */
-const char __s3air_xdk_paths_patch[] = "s3air xdk-paths 1";
+const char __s3air_xdk_paths_patch[] = "s3air xdk-paths 3";	/* 2: fd table with 1024 slots, thread-safe; 3: __rxdk_fd_count */
