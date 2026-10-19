@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Xbox 360">
+      <Configuration>Debug</Configuration>
+      <Platform>Xbox 360</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Xbox 360">
+      <Configuration>Release</Configuration>
+      <Platform>Xbox 360</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{6A1C3E52-7B0D-4C51-9E3F-53A1A1B0C001}</ProjectGuid>
+    <Keyword>Xbox360Proj</Keyword>
+    <RootNamespace>cpp17hello</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>clang</PlatformToolset>
+    <!-- Compile against the stock XDK headers (xtl.h, d3d9.h, XInput), but in C++17 instead of the c++14 default -->
+    <RxdkClangXdkHeaders>true</RxdkClangXdkHeaders>
+    <RxdkClangCppStd>c++17</RxdkClangCppStd>
+    <!-- Keep the linked default.elf (symbols + DWARF) next to the .xex in every configuration, to symbolize crash addresses -->
+    <RxdkClangDebug>true</RxdkClangDebug>
+    <RxdkClangOpt Condition="'$(Configuration)'=='Release'">-O2</RxdkClangOpt>
+    <!-- Never try to deploy to a devkit; F5 launches Xenia instead -->
+    <DeploymentType>Xenia</DeploymentType>
+    <RxdkXeniaPath>$(MSBuildProjectDirectory)\..\..\..\..\xenia_canary_windows\xenia_canary.exe</RxdkXeniaPath>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup>
+    <OutDir>$(MSBuildProjectDirectory)\bin\$(Configuration)\</OutDir>
+    <IntDir>$(MSBuildProjectDirectory)\obj\$(Configuration)\</IntDir>
+    <ImageXexOutput>$(OutDir)default.xex</ImageXexOutput>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>_XBOX;$(ExtraDefines);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>xapilib.lib;d3d9.lib;xboxkrnl.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <ImageXex>
+      <ImageXexOutput>$(OutDir)default.xex</ImageXexOutput>
+    </ImageXex>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
+    <ClCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
+    <ClCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="testdata.txt" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <!-- The Xbox 360 platform does not run PostBuildEvent, so copy the runtime files with a target -->
+  <Target Name="CopyRuntimeFiles" AfterTargets="Build">
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\testdata.txt" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

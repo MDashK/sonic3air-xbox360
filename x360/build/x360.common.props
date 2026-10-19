@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Paths, include directories and defines shared by every S3AIR X360 project.
+  Import after Microsoft.Cpp.props.
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <S3AIRRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\'))</S3AIRRoot>
+    <X360Root>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\'))</X360Root>
+    <OutDir>$(MSBuildThisFileDirectory)out\$(Configuration)\</OutDir>
+    <IntDir>$(MSBuildThisFileDirectory)obj\$(ProjectName)\$(Configuration)\</IntDir>
+    <!-- The RXDK clang Lib target writes to $(OutputFile), which the platform computes from the default OutDir -->
+    <OutputFile Condition="'$(ConfigurationType)'=='StaticLibrary'">$(OutDir)$(TargetName).lib</OutputFile>
+    <!-- Never try to deploy to a devkit; F5 on an application launches Xenia -->
+    <DeploymentType>Xenia</DeploymentType>
+    <RxdkXeniaPath>$(MSBuildThisFileDirectory)..\..\..\xenia_canary_windows\xenia_canary.exe</RxdkXeniaPath>
+  </PropertyGroup>
+  <!--
+    The RXDK clang ClangCompile task has no header dependency tracking: it only recompiles a source whose
+    .cpp is newer than its .o. A changed header would leave stale objects mixed with new ones (this produced
+    byte-swapped lemonscript call targets once). Coarse but safe: if any header of the code trees is newer
+    than the last compile of this project, delete the project's objects so everything recompiles.
+  -->
+  <Target Name="X360InvalidateObjectsOnHeaderChange" BeforeTargets="ClCompile" Inputs="@(X360TrackedHeader)" Outputs="$(IntDir)x360_headers.stamp">
+    <ItemGroup>
+      <_X360StaleObject Include="$(IntDir)*.o" />
+    </ItemGroup>
+    <Message Importance="High" Text="$(ProjectName): headers changed since the last build, recompiling all sources" Condition="'@(_X360StaleObject)' != ''" />
+    <Delete Files="@(_X360StaleObject)" />
+    <MakeDir Directories="$(IntDir)" />
+    <Touch Files="$(IntDir)x360_headers.stamp" AlwaysCreate="true" />
+  </Target>
+  <ItemGroup>
+    <X360TrackedHeader Include="$(S3AIRRoot)librmx\source\**\*.h" Exclude="$(S3AIRRoot)librmx\source\rmxmedia\_glew\**" />
+    <X360TrackedHeader Include="$(S3AIRRoot)Oxygen\lemonscript\source\**\*.h" />
+    <X360TrackedHeader Include="$(S3AIRRoot)Oxygen\oxygenengine\source\**\*.h" />
+    <X360TrackedHeader Include="$(S3AIRRoot)Oxygen\sonic3air\source\**\*.h" />
+    <X360TrackedHeader Include="$(X360Root)include\**\*.h" />
+    <X360TrackedHeader Include="$(X360Root)sdl2lite\**\*.h" />
+  </ItemGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>_XBOX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)'=='Release'">NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)'=='Debug'">DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- Toolchain shims for every translation unit (MS CRT functions that picolibc lacks) -->
+      <AdditionalOptions>-include "$(X360Root)include\x360_compat.h" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(X360Root)include;$(S3AIRRoot)librmx\source;$(S3AIRRoot)framework\external\zlib\zlib;$(X360Root)sdl2lite\include;$(S3AIRRoot)framework\external\sdl;$(S3AIRRoot)Oxygen\lemonscript\source;$(S3AIRRoot)Oxygen\oxygenengine\source;$(S3AIRRoot)Oxygen\sonic3air\source;$(S3AIRRoot)Oxygen\sonic3air\source\external;$(S3AIRRoot)framework\external\ogg-vorbis\libogg\include;$(S3AIRRoot)framework\external\ogg-vorbis\libvorbis\include;$(S3AIRRoot)framework\external\ogg-vorbis\libvorbis\lib;$(S3AIRRoot)framework\external\zlib\zlib\contrib\minizip;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>

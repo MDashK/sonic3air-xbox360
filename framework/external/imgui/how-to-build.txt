@@ -1,0 +1,12 @@
+
+=== Build for Windows with Visual Studio 2022 ===
+
+
+Using the build script
+	- Just execute "build_imgui.bat" and you're done
+
+
+Alternative: Manual build
+	- Open the Visual Studio Solution at "_studio\imgui.sln"
+	- Build as Debug + Release, both Win32 + x64
+	- Afterwards execute "copy_imgui.bat" to copy headers and libs in place

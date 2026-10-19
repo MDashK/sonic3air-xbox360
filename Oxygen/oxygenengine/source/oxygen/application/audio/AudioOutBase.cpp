@@ -1,0 +1,197 @@
+/*
+*	Part of the Oxygen Engine / Sonic 3 A.I.R. software distribution.
+*	Copyright (C) 2017-2026 by Eukaryot
+*
+*	Published under the GNU GPLv3 open source software license, see license.txt
+*	or https://www.gnu.org/licenses/gpl-3.0.en.html
+*/
+
+#include "oxygen/pch.h"
+#include "oxygen/application/audio/AudioOutBase.h"
+#include "oxygen/application/audio/AudioPlayer.h"
+#include "oxygen/application/Application.h"
+#include "oxygen/application/Configuration.h"
+#include "oxygen/engine/modding/ModManager.h"
+
+
+AudioOutBase::AudioOutBase() :
+	mAudioPlayer(mAudioCollection)
+{
+}
+
+AudioOutBase::~AudioOutBase()
+{
+}
+
+void AudioOutBase::startup()
+{
+	// Create audio mixers
+	FTX::Audio->createAudioMixer<rmx::AudioMixer>("In-game Master",	(int)AudioMixerId::INGAME_MASTER, (int)AudioMixerId::ROOT);
+	FTX::Audio->createAudioMixer<rmx::AudioMixer>("In-game Music",	(int)AudioMixerId::INGAME_MUSIC,  (int)AudioMixerId::INGAME_MASTER);
+	FTX::Audio->createAudioMixer<rmx::AudioMixer>("In-game Sound",	(int)AudioMixerId::INGAME_SOUND,  (int)AudioMixerId::INGAME_MASTER);
+	FTX::Audio->createAudioMixer<rmx::AudioMixer>("Menu Master",	(int)AudioMixerId::MENU_MASTER,   (int)AudioMixerId::ROOT);
+	FTX::Audio->createAudioMixer<rmx::AudioMixer>("Menu Music",		(int)AudioMixerId::MENU_MUSIC,    (int)AudioMixerId::MENU_MASTER);
+	FTX::Audio->createAudioMixer<rmx::AudioMixer>("Menu Sound",		(int)AudioMixerId::MENU_SOUND,    (int)AudioMixerId::MENU_MASTER);
+
+	// Load audio definitions
+	//  -> No mods yet here, that's coming later in "handleGameLoaded"
+	if (FTX::FileSystem->exists(L"data/audio/original/"))
+	{
+		// Game is used differentiation between original and remastered soundtrack (namely S3AIR)
+		mAudioCollection.loadFromJson(L"data/audio/original", L"audio_default.json", AudioCollection::Package::ORIGINAL);
+		reloadRemasteredSoundtrack();
+	}
+	else
+	{
+		// Simply load any JSON from "data/audio"
+		std::vector<rmx::FileIO::FileEntry> fileEntries;
+		fileEntries.reserve(8);
+		FTX::FileSystem->listFilesByMask(L"data/audio/*.json", true, fileEntries);
+		for (const rmx::FileIO::FileEntry& fileEntry : fileEntries)
+		{
+			mAudioCollection.loadFromJson(fileEntry.mPath, fileEntry.mFilename, AudioCollection::Package::ORIGINAL);
+		}
+	}
+
+	// Startup
+	mAudioPlayer.startup();
+	setGlobalVolume(Configuration::instance().mAudio.mMasterVolume);
+}
+
+void AudioOutBase::shutdown()
+{
+	mAudioPlayer.shutdown();
+}
+
+void AudioOutBase::realtimeUpdate(float secondsPassed)
+{
+	// Sync volumes
+	Configuration& config = Configuration::instance();
+	if (mGlobalVolume != config.mAudio.mMasterVolume)
+	{
+		setGlobalVolume(config.mAudio.mMasterVolume);
+	}
+	if (mMusicVolume != config.mAudio.mMusicVolume)
+	{
+		mMusicVolume = config.mAudio.mMusicVolume;
+		FTX::Audio->setAudioMixerVolumeByID((int)AudioMixerId::INGAME_MUSIC, mMusicVolume);
+		FTX::Audio->setAudioMixerVolumeByID((int)AudioMixerId::MENU_MUSIC, mMusicVolume);
+	}
+	if (mSoundVolume != config.mAudio.mSoundVolume)
+	{
+		mSoundVolume = config.mAudio.mSoundVolume;
+		FTX::Audio->setAudioMixerVolumeByID((int)AudioMixerId::INGAME_SOUND, mSoundVolume);
+		FTX::Audio->setAudioMixerVolumeByID((int)AudioMixerId::MENU_SOUND, mSoundVolume);
+	}
+
+
+	// Update playback and streaming
+	mAudioPlayer.updatePlayback(secondsPassed);
+}
+
+void AudioOutBase::reloadRemasteredSoundtrack()
+{
+	mAudioCollection.clearPackage(AudioCollection::Package::REMASTERED);
+	mAudioCollection.loadFromJson(L"data/audio/remastered", L"audio_replacements.json", AudioCollection::Package::REMASTERED);
+	mLoadedRemasteredSoundtrack = (mAudioCollection.getNumSourcesByPackageType(AudioCollection::Package::REMASTERED) != 0);
+	determineActiveSourceRegistrations();
+}
+
+void AudioOutBase::setGlobalVolume(float volume)
+{
+	mGlobalVolume = volume;
+	FTX::Audio->setGlobalVolume(mGlobalVolume);
+}
+
+AudioOutBase::AudioKeyType AudioOutBase::getAudioKeyType(uint64 audioKey) const
+{
+	AudioCollection::SourceRegistration* sourceReg = mAudioCollection.getSourceRegistration(audioKey);
+	if (nullptr == sourceReg)
+		return AudioKeyType::INVALID;
+	return (AudioKeyType)sourceReg->mPackage;
+}
+
+std::string_view AudioOutBase::getAudioKeyDisplayName(uint64 audioKey) const
+{
+	AudioCollection::SourceRegistration* sourceReg = mAudioCollection.getSourceRegistration(audioKey);
+	if (nullptr == sourceReg)
+		return "";
+	return sourceReg->mAudioDefinition->mDisplayName;
+}
+
+bool AudioOutBase::isPlayingAudioKey(uint64 audioKey) const
+{
+	return mAudioPlayer.isPlayingAudioKey(audioKey);
+}
+
+bool AudioOutBase::playAudioBase(uint64 audioKey, uint8 contextId)
+{
+	return mAudioPlayer.playAudio(audioKey, contextId);
+}
+
+void AudioOutBase::playOverride(uint64 audioKey, uint8 contextId, uint8 channelId, uint8 overriddenChannelId)
+{
+	mAudioPlayer.playOverride(audioKey, contextId, channelId, overriddenChannelId);
+}
+
+void AudioOutBase::fadeInChannel(uint8 channelId, float length)
+{
+	mAudioPlayer.fadeInChannel(channelId, length);
+}
+
+void AudioOutBase::fadeOutChannel(uint8 channelId, float length)
+{
+	mAudioPlayer.fadeOutChannel(channelId, length);
+}
+
+void AudioOutBase::enableAudioModifier(uint8 channelId, uint8 contextId, std::string_view postfix, float relativeSpeed)
+{
+	mAudioPlayer.enableAudioModifier(channelId, contextId, postfix, relativeSpeed);
+}
+
+void AudioOutBase::disableAudioModifier(uint8 channelId, uint8 contextId)
+{
+	mAudioPlayer.disableAudioModifier(channelId, contextId);
+}
+
+void AudioOutBase::handleGameLoaded()
+{
+	// Active mods are now set; this is handled just like mods changed
+	handleActiveModsChanged();
+}
+
+void AudioOutBase::handleActiveModsChanged()
+{
+	// First of all, stop all playing sounds immediately
+	mAudioPlayer.stopAllSounds(true);
+	FTX::Audio->removeAllSounds();
+
+	// Reload of modded audio definitions
+	mAudioCollection.clearPackage(AudioCollection::Package::MODDED);
+	for (const Mod* mod : ModManager::instance().getActiveMods())
+	{
+		mAudioCollection.loadFromJson(mod->mFullPath + L"audio", L"audio_replacements.json", AudioCollection::Package::MODDED);
+	}
+	determineActiveSourceRegistrations();
+
+	// We could now remove all audio sources that won't be used any more, but there's no actual need to do this
+	//  -> They will receive an unload due to not being actively used sooner or later
+	//  -> Their instances won't get deleted, but most of their memory will get freed then
+}
+
+void AudioOutBase::reloadAudioCollection()
+{
+	AudioPlayer::SavedPlaybackState playbackState;
+	mAudioPlayer.savePlaybackState(playbackState);
+
+	// Reload audio definitions (only modded audio definitions, but that should be fine)
+	handleActiveModsChanged();
+
+	mAudioPlayer.loadPlaybackState(playbackState);
+}
+
+void AudioOutBase::determineActiveSourceRegistrations()
+{
+	// Default implementation: Use remastered music if possible
+	mAudioCollection.determineActiveSourceRegistrations(false);
+}

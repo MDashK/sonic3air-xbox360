@@ -1,0 +1,12 @@
+
+
+function void script01()
+{
+	testArrays()
+	testBools()
+	testConstants()
+	testFloats()
+	testIfElse()
+	testObjectHandle()
+	testStrings()
+}

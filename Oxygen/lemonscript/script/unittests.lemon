@@ -1,0 +1,229 @@
+
+function void runTests()
+{
+	debugLog("Running tests...")
+
+	runIntegerArithmeticTests()
+	runFloatArithmeticTests()
+	runConstantArraysTest()
+	runArraysTest()
+	runReferencesTest()
+
+	debugLog("Done with all tests")
+}
+
+
+
+// ----- Integer arithmetic -----
+
+function void runIntegerArithmeticTests()
+{
+	if (!integerArithmeticTestA())
+		debugLog("Integer arithmetic test A failed")
+	if (!integerArithmeticTestB())
+		debugLog("Integer arithmetic test B failed")
+	if (!integerArithmeticTestC())
+		debugLog("Integer arithmetic test C failed")
+	if (!integerArithmeticTestD())
+		debugLog("Integer arithmetic test D failed")
+	if (!integerArithmeticTestE())
+		debugLog("Integer arithmetic test E failed")
+	if (!integerArithmeticTestF())
+		debugLog("Integer arithmetic test F failed")
+	if (!integerArithmeticTestG())
+		debugLog("Integer arithmetic test G failed")
+}
+
+function bool integerArithmeticTestA()
+{
+	s16 a = 9
+	a += (a < 0) ? 8 : -8
+	return (a == 1)
+}
+
+function bool integerArithmeticTestB()
+{
+	u16 a = 14
+	s16 b = -5
+	return (a + b == 9) && (b + a == 9)
+}
+
+function bool integerArithmeticTestC()
+{
+	u32 a = 0xfffff4e4
+	u16 result = (0xfffff580 - (a + 4)) / 8
+	return (result == 0x13)
+}
+
+function bool integerArithmeticTestD()
+{
+	s16 a = -30
+	s16 b = 9
+	s32 result = s32(a << 16) / b
+	return (result == -218453)
+}
+
+function bool integerArithmeticTestE()
+{
+	u8[0x04] = 0xbb
+	u8 result = (u8[0x04] &= 0xfc)
+	return (result == 0xb8)
+}
+
+function bool integerArithmeticTestF()
+{
+	s8 range = 2
+	s16 value = -20
+	s16 result = clamp(value, -range, range)
+	return (result == -2)
+}
+
+function bool integerArithmeticTestG()
+{
+	u8 a = 0
+	++u8[++a]
+	return (a == 1)
+}
+
+
+
+// ----- Float arithmetic -----
+
+function void runFloatArithmeticTests()
+{
+	if (!floatArithmeticTestA())
+		debugLog("Float arithmetic test A failed")
+	if (!floatArithmeticTestB())
+		debugLog("Float arithmetic test B failed")
+}
+
+function bool floatArithmeticTestA()
+{
+	s16 a = 9
+	float b = 2.5
+	return (b * a == a * b) && (b * a == 22.5)
+}
+
+function bool floatArithmeticTestB()
+{
+	return (Math.sin(Math.degreesToRadians(90.0)) == 1.0)
+}
+
+
+
+// ----- Constant arrays -----
+
+function void runConstantArraysTest()
+{
+	if (!constantArraysTestA())
+		debugLog("Constant arrays test A failed")
+	if (!constantArraysTestB())
+		debugLog("Constant arrays test B failed")
+	if (!constantArraysTestC())
+		debugLog("Constant arrays test C failed")
+}
+
+constant array<s16> CONSTANT_ARRAY_S16 =
+{
+	-8, 30008,
+	-20000
+}
+
+function bool constantArraysTestA()
+{
+	s16 sum = 0
+	for (u8 k = 0; k < CONSTANT_ARRAY_S16.length(); ++k)
+		sum += CONSTANT_ARRAY_S16[k]
+	return (sum == 10000)
+}
+
+function bool constantArraysTestB()
+{
+	constant array<double> CONSTANT_ARRAY_LOCAL = { 0.567, 1300, -66.0f }
+	double sum = 0
+	for (u8 k = 0; k < CONSTANT_ARRAY_LOCAL.length(); ++k)
+		sum += CONSTANT_ARRAY_LOCAL[k]
+	return (sum == 1234.567)
+}
+
+function bool constantArraysTestC()
+{
+	constant array<string> CONSTANT_ARRAY_LOCAL = { "Hel", "lo W", "", "orld!" }
+	string sum = ""
+	for (u8 k = 0; k < CONSTANT_ARRAY_LOCAL.length(); ++k)
+		sum = sum + CONSTANT_ARRAY_LOCAL[k]
+	return (sum == "Hello World!")
+}
+
+
+
+// ----- Arrays -----
+
+function void runArraysTest()
+{
+	if (!arraysTestA())
+		debugLog("Arrays test A failed")
+	if (!arraysTestB())
+		debugLog("Arrays test B failed")
+}
+
+function bool arraysTestA()
+{
+	u16 arr[10]
+	for (u16 k = 0; k < 30; ++k)	// Test both valid and invalid indices
+	{
+		if (arr[k] != 0)
+			return false
+		arr[k] = k + 13
+	}
+	for (u16 k = 0; k < 30; ++k)
+	{
+		u16 expectedValue = (k < arr.length()) ? (k + 13) : 0
+		if (arr[k] != expectedValue)
+			return false
+	}
+	return true
+}
+
+function bool arraysTestB()
+{
+	u16 arr[10]
+	u8 index = 2
+
+	// Order of operations is not defined in this case, so this should create a compiler warning
+	//  -> However, we still test it for what we expect from the current implementation,
+	//     namely that the left side is executed first
+	arr[index += 1] = index
+	return (arr[2] == 0) && (arr[3] == 3)
+}
+
+
+
+// ----- References -----
+
+function void runReferencesTest()
+{
+	if (!referencesTestA())
+		debugLog("Arrays test A failed")
+}
+
+global u8 refTestGlobal = 0
+
+function bool referencesTestA()
+{
+	u8 value1 = 0
+	u8 value2 = 0
+	increase_u8(value1)
+	increase_u8(value2)
+	increase_u8(value2)
+	for (u8 k = 0; k < 5; ++k)
+		increase_u8(refTestGlobal)
+
+	if (value1 != 1)
+		return false
+	if (value2 != 2)
+		return false
+	if (refTestGlobal != 5)
+		return false
+	return true
+}

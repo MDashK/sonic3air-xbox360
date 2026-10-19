@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Xbox 360 toolset settings shared by every S3AIR X360 project.
+  Import right after Microsoft.Cpp.Default.props (before Microsoft.Cpp.props), because the
+  platform picks its toolset files from PlatformToolset when Microsoft.Cpp.props is imported.
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Configuration">
+    <!-- RXDK-360 clang/LLVM toolchain, see x360/README.md (requires x360/tools/fix_rxdk_ppc64.py to have been run) -->
+    <PlatformToolset>clang</PlatformToolset>
+    <!-- Compile against the stock XDK headers (xtl.h, d3d9.h, XAudio2, XInput), in C++17 like upstream S3AIR -->
+    <RxdkClangXdkHeaders>true</RxdkClangXdkHeaders>
+    <RxdkClangCppStd>c++17</RxdkClangCppStd>
+    <!-- DWARF in every configuration: the linked default.elf is used to symbolize crash addresses -->
+    <RxdkClangDebug>true</RxdkClangDebug>
+    <RxdkClangOpt Condition="'$(Configuration)'=='Release'">-O2</RxdkClangOpt>
+    <RxdkClangOpt Condition="'$(Configuration)'=='Debug'">-O0</RxdkClangOpt>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+</Project>

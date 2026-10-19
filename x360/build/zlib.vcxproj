@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Xbox 360">
+      <Configuration>Debug</Configuration>
+      <Platform>Xbox 360</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Xbox 360">
+      <Configuration>Release</Configuration>
+      <Platform>Xbox 360</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{7B6E0C11-3A21-4C1E-9D0B-5A1E2F0C1001}</ProjectGuid>
+    <Keyword>Xbox360Proj</Keyword>
+    <RootNamespace>zlib</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="x360.toolset.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <!-- Pure C, no XDK API: compile in plain clang mode (picolibc only). The XDK-headers mode is C++-only
+         (rxdk_msvcrt_compat.h clashes in C) and would also make zlib take its _WIN32 code paths. -->
+    <RxdkClangXdkHeaders>false</RxdkClangXdkHeaders>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="x360.common.props" />
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <!-- picolibc has unistd.h and the RXDK runtime provides read/write/lseek/close (used by gz*.c) -->
+      <PreprocessorDefinitions>Z_HAVE_UNISTD_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="$(S3AIRRoot)framework\external\zlib\zlib\*.c" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

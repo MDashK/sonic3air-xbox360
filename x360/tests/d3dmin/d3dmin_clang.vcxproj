@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|Xbox 360">
+      <Configuration>Release</Configuration>
+      <Platform>Xbox 360</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{6A1C3E52-7B0D-4C51-9E3F-53A1A1B0C002}</ProjectGuid>
+    <Keyword>Xbox360Proj</Keyword>
+    <RootNamespace>d3dmin_clang</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>clang</PlatformToolset>
+    <RxdkClangXdkHeaders>true</RxdkClangXdkHeaders>
+    <RxdkClangCppStd>c++17</RxdkClangCppStd>
+    <RxdkClangDebug>true</RxdkClangDebug>
+    <RxdkClangOpt>-O2</RxdkClangOpt>
+    <!-- Experiments: extra archives to link (full paths, ';'-separated) -->
+    <RxdkClangLibs>$(ExtraLibs)</RxdkClangLibs>
+    <DeploymentType>Xenia</DeploymentType>
+    <RxdkXeniaPath>$(MSBuildProjectDirectory)\..\..\..\..\xenia_canary_windows\xenia_canary.exe</RxdkXeniaPath>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup>
+    <OutDir>$(MSBuildProjectDirectory)\bin\clang\</OutDir>
+    <IntDir>$(MSBuildProjectDirectory)\obj\clang\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>_XBOX;NDEBUG;$(ExtraDefines);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>xapilib.lib;d3d9.lib;xboxkrnl.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <!-- Experiments: extra ld.lld options, e.g. /p:ExtraLinkOptions="-e mainCRTStartup" -->
+      <AdditionalOptions>$(ExtraLinkOptions) %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+    <ImageXex>
+      <ImageXexOutput>$(OutDir)default.xex</ImageXexOutput>
+    </ImageXex>
+  </ItemDefinitionGroup>
+  <ItemGroup Condition="'$(Exp3)' != 'true'">
+    <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <!-- Experiment 3 (build_exp3.cmd): main() comes from the MS-compiled d3dmin_ms.a passed in ExtraLibs -->
+  <ItemGroup Condition="'$(Exp3)' == 'true'">
+    <ClCompile Include="exp3_stub.cpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

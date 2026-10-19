@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Xbox 360">
+      <Configuration>Debug</Configuration>
+      <Platform>Xbox 360</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Xbox 360">
+      <Configuration>Release</Configuration>
+      <Platform>Xbox 360</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{7B6E0C11-3A21-4C1E-9D0B-5A1E2F0C1101}</ProjectGuid>
+    <Keyword>Xbox360Proj</Keyword>
+    <RootNamespace>libtest</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="..\..\build\x360.toolset.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="..\..\build\x360.common.props" />
+  <PropertyGroup>
+    <OutDir>$(MSBuildProjectDirectory)\bin\$(Configuration)\</OutDir>
+    <IntDir>$(MSBuildProjectDirectory)\obj\$(Configuration)\</IntDir>
+    <X360LibDir>$(X360Root)build\out\$(Configuration)\</X360LibDir>
+    <!-- Phase 2 libraries (build x360\build\*.vcxproj first) -->
+    <RxdkClangLibs>$(X360LibDir)lemonscript.lib;$(X360LibDir)rmxmedia.lib;$(X360LibDir)rmxbase.lib;$(X360LibDir)sdl2lite.lib;$(X360LibDir)zlib.lib;$(X360LibDir)x360runtime.lib</RxdkClangLibs>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <!-- Upstream's lemonscript test main.cpp becomes lemon_test_main; x360_main.cpp #undefs it -->
+      <PreprocessorDefinitions>main=lemon_test_main;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>xapilib.lib;d3d9.lib;xboxkrnl.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <ImageXex>
+      <ImageXexOutput>$(OutDir)default.xex</ImageXexOutput>
+    </ImageXex>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="x360_main.cpp" />
+    <ClCompile Include="$(S3AIRRoot)Oxygen\lemonscript\source\test\main.cpp" />
+    <ClCompile Include="$(S3AIRRoot)Oxygen\lemonscript\source\test\TestBindings.cpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <!-- The test scripts go next to the .xex: game:\script\... -->
+  <Target Name="CopyTestScripts" AfterTargets="Build">
+    <ItemGroup>
+      <TestScript Include="$(S3AIRRoot)Oxygen\lemonscript\script\**\*.lemon" />
+    </ItemGroup>
+    <Copy SourceFiles="@(TestScript)" DestinationFiles="@(TestScript->'$(OutDir)script\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

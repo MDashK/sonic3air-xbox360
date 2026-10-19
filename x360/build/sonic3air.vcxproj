@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Xbox 360">
+      <Configuration>Debug</Configuration>
+      <Platform>Xbox 360</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Xbox 360">
+      <Configuration>Release</Configuration>
+      <Platform>Xbox 360</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{7B6E0C11-3A21-4C1E-9D0B-5A1E2F0C100C}</ProjectGuid>
+    <Keyword>Xbox360Proj</Keyword>
+    <RootNamespace>sonic3air</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="x360.toolset.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="x360.common.props" />
+  <PropertyGroup>
+    <!-- The game folder: default.xex here, plus the data (see x360/README.md) -->
+    <OutDir>$(X360Root)deploy\$(Configuration)\</OutDir>
+    <X360LibDir>$(X360Root)build\out\$(Configuration)\</X360LibDir>
+    <RxdkClangLibs>$(X360LibDir)oxygen.lib;$(X360LibDir)oxygen_netcore.lib;$(X360LibDir)lemonscript.lib;$(X360LibDir)rmxext_oggvorbis.lib;$(X360LibDir)rmxmedia.lib;$(X360LibDir)rmxbase.lib;$(X360LibDir)oggvorbis.lib;$(X360LibDir)minizip.lib;$(X360LibDir)zlib.lib;$(X360LibDir)sdl2lite.lib;$(X360LibDir)x360runtime.lib</RxdkClangLibs>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link>
+      <AdditionalDependencies>xapilib.lib;d3d9.lib;xaudio2.lib;x3daudio.lib;xmcore.lib;xboxkrnl.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <ImageXex>
+      <ImageXexOutput>$(OutDir)default.xex</ImageXexOutput>
+    </ImageXex>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="$(S3AIRRoot)Oxygen\sonic3air\source\sonic3air\**\*.cpp" />
+    <ClCompile Include="$(X360Root)port\x360_platform.cpp" />
+    <ClCompile Include="$(X360Root)port\D3D9Drawer.cpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

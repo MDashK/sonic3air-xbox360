@@ -4,8 +4,6 @@ Original source code forked from: https://github.com/Eukaryot/sonic3air
 
 v26.03.28.0
 
-Source code will be uploaded on v1 release. Currently on beta phase.
-
 Xbox 360 is Big-Endian, so .bin files are provided alongside the XEX file.
 
 
@@ -21,9 +19,10 @@ Xbox 360 is Big-Endian, so .bin files are provided alongside the XEX file.
 
 ## Status
 
-* Solid 60 FPS
+* Solid 60 FPS, everything seems to be working correctly
 * MODs working
 * 2P working
+* Full and complete playthrough still needed
 
 ---------------------------
 
@@ -70,6 +69,7 @@ For information on how to build for different platforms, find the readme files i
 
 Additional platform ports:
 * Vita: See https://github.com/v-atamanenko/sonic3air
+* Xbox 360: See https://github.com/MDashK/sonic3air-xbox360
 
 
 ## External dependencies

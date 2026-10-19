@@ -1,0 +1,260 @@
+﻿/*
+*	Part of the Oxygen Engine / Sonic 3 A.I.R. software distribution.
+*	Copyright (C) 2017-2026 by Eukaryot
+*
+*	Published under the GNU GPLv3 open source software license, see license.txt
+*	or https://www.gnu.org/licenses/gpl-3.0.en.html
+*/
+
+#include "oxygen/pch.h"
+#include "oxygen/menu/devmode/windows/VRAMWritesWindow.h"
+
+#if defined(SUPPORT_IMGUI)
+
+#include "oxygen/menu/imgui/ImGuiHelpers.h"
+#include "oxygen/application/Application.h"
+#include "oxygen/application/video/VideoOut.h"
+#include "oxygen/rendering/parts/RenderParts.h"
+#include "oxygen/simulation/CodeExec.h"
+#include "oxygen/simulation/EmulatorInterface.h"
+#include "oxygen/simulation/LemonScriptProgram.h"
+#include "oxygen/simulation/Simulation.h"
+
+#include <lemon/program/function/Function.h>
+
+
+VRAMWritesWindow::VRAMWritesWindow() :
+	DevModeWindowBase("VRAM Writes", Category::GRAPHICS, 0)
+{
+}
+
+void VRAMWritesWindow::buildContent()
+{
+	ImGui::SetWindowPos(ImVec2(840.0f, 180.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetWindowSize(ImVec2(450.0f, 300.0f), ImGuiCond_FirstUseEver);
+
+	const float uiScale = getUIScale();
+
+	CodeExec& codeExec = Application::instance().getSimulation().getCodeExec();
+	EmulatorInterface& emulatorInterface = codeExec.getEmulatorInterface();
+	DebugTracking& debugTracking = codeExec.getDebugTracking();
+
+	const PlaneManager& planeManager = VideoOut::instance().getRenderParts().getPlaneManager();
+	const ScrollOffsetsManager& scrollOffsetsManager = VideoOut::instance().getRenderParts().getScrollOffsetsManager();
+	const SpriteManager& spriteManager = VideoOut::instance().getRenderParts().getSpriteManager();
+
+	const uint16 startAddressPlaneA = planeManager.getPlaneBaseVRAMAddress(PlaneManager::PLANE_A);
+	const uint16 startAddressPlaneB = planeManager.getPlaneBaseVRAMAddress(PlaneManager::PLANE_B);
+	const uint16 startAddressPlaneW = planeManager.getPlaneBaseVRAMAddress(PlaneManager::PLANE_W);
+	const uint16 endAddressPlaneA = startAddressPlaneA + (uint16)planeManager.getPlaneSizeInVRAM(PlaneManager::PLANE_A);
+	const uint16 endAddressPlaneB = startAddressPlaneB + (uint16)planeManager.getPlaneSizeInVRAM(PlaneManager::PLANE_B);
+	const uint16 endAddressPlaneW = startAddressPlaneW + (uint16)planeManager.getPlaneSizeInVRAM(PlaneManager::PLANE_W);
+	const uint16 startAddressScrollOffsets = scrollOffsetsManager.getHorizontalScrollTableBase();
+	const uint16 endAddressScrollOffsets = startAddressScrollOffsets + 0x400;
+	const uint16 startAddressSAT = spriteManager.getSpriteAttributeTableBase();
+	const uint16 endAddressSAT = startAddressSAT + 0x200;
+
+	// Create a sorted list
+	std::vector<DebugTracking::VRAMWrite*> writes = debugTracking.getVRAMWrites();
+	std::sort(writes.begin(), writes.end(), [](const DebugTracking::VRAMWrite* a, const DebugTracking::VRAMWrite* b) { return a->mAddress < b->mAddress; } );
+
+	// Checkboxes
+	{
+		ImGui::Checkbox("Plane A", &mShowPlaneA);
+		if (ImGui::IsItemHovered())
+			ImGui::SetItemTooltip("VRAM range: 0x%04x - 0x%04x", startAddressPlaneA, endAddressPlaneA - 1);
+
+		ImGui::SameLine();
+		ImGui::Text("   ");
+		ImGui::SameLine();
+
+		ImGui::Checkbox("Plane B", &mShowPlaneB);
+		if (ImGui::IsItemHovered())
+			ImGui::SetItemTooltip("VRAM range: 0x%04x - 0x%04x", startAddressPlaneB, endAddressPlaneB - 1);
+
+		ImGui::SameLine();
+		ImGui::Text("   ");
+		ImGui::SameLine();
+
+		ImGui::Checkbox("Plane W", &mShowPlaneW);
+		if (ImGui::IsItemHovered())
+			ImGui::SetItemTooltip("VRAM range: 0x%04x - 0x%04x", startAddressPlaneW, endAddressPlaneW - 1);
+
+		ImGui::Checkbox("Scroll Offsets", &mShowScroll);
+		if (ImGui::IsItemHovered())
+			ImGui::SetItemTooltip("VRAM range: 0x%04x - 0x%04x", startAddressScrollOffsets, endAddressScrollOffsets - 1);
+
+		ImGui::Checkbox("Sprite Attribute Table", &mShowSAT);
+		if (ImGui::IsItemHovered())
+			ImGui::SetItemTooltip("VRAM range: 0x%04x - 0x%04x", startAddressSAT, endAddressSAT - 1);
+
+		ImGui::Checkbox("Patterns and others", &mShowOthers);
+		if (ImGui::IsItemHovered())
+			ImGui::SetItemTooltip("All other VRAM writes");
+	}
+
+	// Filtering
+	static int32 filterAddress = -1;
+	static ImGuiHelpers::InputString filterAddressString;
+	ImGui::AlignTextToFramePadding();
+	ImGui::Text("Filter by address:");
+	ImGui::SameLine();
+	ImGui::PushItemWidth(uiScale * 180);
+	if (ImGuiHelpers::InputText("##FilterByAddress", filterAddressString))
+	{
+		if (filterAddressString.isEmpty())
+			filterAddress = -1;
+		else if (rmx::startsWith(filterAddressString.mInternal, "0x"))
+			filterAddress = (int32)rmx::parseInteger(filterAddressString.mInternal);
+		else
+			filterAddress = (int32)rmx::parseInteger(std::string("0x") + filterAddressString.mInternal);
+	}
+	ImGui::PopItemWidth();
+
+	ImGui::SameLine();
+	if (ImGui::SmallButton("Clear"))
+	{
+		filterAddressString.clear();
+		filterAddress = -1;
+	}
+	ImGui::SameLine();
+	ImGui::TextDisabled("(?)");
+	if (ImGui::BeginItemTooltip())
+	{
+		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 25.0f);
+		ImGui::TextUnformatted("To list only writes to a specific VRAM address (and also writes that include that address in its range), enter the address in hexadecimal form here, e.g. 0x1234.");
+		ImGui::PopTextWrapPos();
+		ImGui::EndTooltip();
+	}
+
+	ImGui::Spacing();
+
+	if (ImGui::BeginTable("VRAM Writes Table", 1, ImGuiTableFlags_Borders, ImVec2(0.0f, 0.0f)))
+	{
+		std::unordered_map<int, int> uniqueIDCounter;
+
+		for (const DebugTracking::VRAMWrite* write : writes)
+		{
+			if (filterAddress >= 0)
+			{
+				if (filterAddress < write->mAddress || filterAddress >= write->mAddress + write->mSize)
+					continue;
+			}
+
+			const uint64 key = ((uint64)write->mAddress << 32) + write->mSize;
+			String line;
+			if (write->mSize == 2)
+			{
+				line.formatString("[0x%04x] = 0x%02x (2 bytes) at %s", write->mAddress, write->mValue, write->mLocation.toString(codeExec).c_str());
+			}
+			else
+			{
+				line.formatString("[0x%04x] (0x%02x bytes) at %s", write->mAddress, write->mSize, write->mLocation.toString(codeExec).c_str());
+			}
+
+			ImVec4 color(1.0f, 1.0f, 1.0f, 1.0f);
+			if (write->mAddress >= startAddressPlaneA && write->mAddress < endAddressPlaneA)
+			{
+				if (!mShowPlaneA)
+					continue;
+				line = String("Plane A:   ") + line;
+				color = ImVec4(1.0f, 1.0f, 0.75f, 1.0f);
+			}
+			else if (write->mAddress >= startAddressPlaneB && write->mAddress < endAddressPlaneB)
+			{
+				if (!mShowPlaneB)
+					continue;
+				line = String("Plane B:   ") + line;
+				color = ImVec4(1.0f, 0.75f, 1.0f, 1.0f);
+			}
+			else if (write->mAddress >= startAddressPlaneW && write->mAddress < endAddressPlaneW)
+			{
+				if (!mShowPlaneW)
+					continue;
+				line = String("Plane W:   ") + line;
+				color = ImVec4(1.0f, 0.75f, 1.0f, 1.0f);
+			}
+			else if (write->mAddress >= startAddressScrollOffsets && write->mAddress < endAddressScrollOffsets)
+			{
+				if (!mShowScroll)
+					continue;
+				line = String("Scroll Offsets:   ") + line;
+				color = ImVec4(0.75f, 1.0f, 1.0f, 1.0f);
+			}
+			else if (write->mAddress >= startAddressSAT && write->mAddress < endAddressSAT)
+			{
+				if (!mShowSAT)
+					continue;
+				line = String("Sprites:   ") + line;
+				color = ImVec4(0.75f, 0.75f, 1.0f, 1.0f);
+			}
+			else
+			{
+				if (!mShowOthers)
+					continue;
+			}
+
+			ImGui::TableNextRow();
+			ImGui::TableSetColumnIndex(0);
+
+			int ID = (write->mAddress << 24) + (write->mSize << 16);
+			int& counter = uniqueIDCounter[ID];
+			ID += counter;
+			++counter;
+			ImGui::PushID(ID);
+
+			const bool openTree = ImGui::TreeNodeEx("##", 0);
+			ImGui::SameLine();
+			ImGui::TextColored(color, "%s", *line);
+
+			if (openTree)
+			{
+				ImGui::TextColored(ImGuiHelpers::COLOR_GRAY80, "   Call Stack:");
+				std::vector<DebugTracking::Location> callStack;
+				debugTracking.getCallStackFromCallFrameIndex(callStack, write->mCallFrameIndex, write->mLocation.mProgramCounter);
+
+				for (size_t k = 0; k < callStack.size(); ++k)
+				{
+					const DebugTracking::Location& loc = callStack[k];
+					const std::string& functionName = loc.toString(debugTracking.getCodeExec());
+					if (loc.mLineNumber >= 0)
+					{
+						ImGui::TextColored(ImGuiHelpers::COLOR_GRAY80, "        %s, line %d", functionName.c_str(), loc.mLineNumber);
+
+						if (loc.mProgramCounter.has_value())
+						{
+							ImGui::PushID((int)k);
+							if (ImGuiHelpers::OpenCodeLocation::drawButton())
+							{
+								LemonScriptProgram::ResolvedLocation location;
+								codeExec.getLemonScriptProgram().resolveLocation(location, *loc.mFunction, (uint32)loc.mProgramCounter.value());
+								if (nullptr != location.mSourceFileInfo)
+								{
+									ImGuiHelpers::OpenCodeLocation::open(location.mSourceFileInfo->getFullFilePath(), loc.mLineNumber);
+								}
+							}
+							ImGui::PopID();
+						}
+					}
+					else
+					{
+						ImGui::TextColored(ImGuiHelpers::COLOR_GRAY80, "        %s", functionName.c_str());
+					}
+				}
+
+				ImGui::TreePop();
+			}
+
+			ImGui::PopID();
+		}
+
+		if (writes.size() == debugTracking.getVRAMWrites().capacity())
+		{
+			ImGui::Text("[Reached the limit]");
+		}
+
+		ImGui::EndTable();
+	}
+}
+
+#endif

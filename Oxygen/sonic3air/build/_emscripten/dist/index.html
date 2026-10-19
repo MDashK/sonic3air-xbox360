@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en-us>
+<head>
+<meta charset=utf-8>
+<meta content="text/html; charset=utf-8"http-equiv=Content-Type>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Sonic 3 A.I.R.</title>
+<link rel="apple-touch-icon" sizes="256x256" href="icon.png">
+<link rel="manifest" href="manifest.json">
+</head>
+<body>
+	<h1>Sonic 3 AIR for iOS and Web (Public Beta 2026.03.28)</h1>
+	<div>This is a beta release. <span style="color:red">The port lacks functionality that a native app would have and some limitations may not be fixed.</span> You will encounter problems. Here are just a few notes before you start:</div>
+	<ul>
+		<li>Once the game has been installed to your home screen, there is a one time data download of around 7MB when you launch the game for the first time. If your device goes to sleep during this, the download will fail and you will need to kill the app and relaunch it for the download to try again. When a new version of the game comes out, you will need to download the entire thing again just like you would with the PC versions. You can install multiple versions at the same time.</li>
+		<li>There is a basic file manager accessible accessible in-game from the Options menu. This will allow you to upload or download files from the game data folders. You need to upload and download files one at a time, but mods inside .zip files are supported to make uploading mods easier. The file manager can be used to backup your save data or upload your save data from the PC version.</li>
+		<li>The remastered soundtrack is not included by default in the iOS / Web release. Due to limitations of running the game as a web application, all content must fit into memory. Not including the remastered soundtrack saves over 100MB against the size of the game, making it run more stable on many devices. The option to download the remastered soundtrack is in the options window. You can also manually upload audioremaster.bin from the PC release into the file manager if you have issues downloading it from the server. If the game is unstable after doing this, you can delete autoremaster.bin via the file manager to improve game performance.</li>
+		<li>A To Do list for the iOS port with more details on known issues and changes that are planned for later can be found <a href="https://projects.sappharad.com/s3air_ios/todoList.html">here</a>.</li>
+	</ul>
+	<h3>iOS Requirements</h3>
+	<ul>
+		<li>The iOS version requires a device running iOS 13 or later. Following these steps on an older device will not install as intended. You may be able to play in Safari using the web browser link instead.</li>
+	</ul>
+	<h3>How to Install</h3>
+	<ol>
+		<li>Visit this page from the device you want to install the game on.</li>
+		<li>Tap the Share button <img src="share.svg" style="width: 32px; height: 32px;" /> in the Safari toolbar.</li>
+		<li>Select "Add to Home Screen" from the options that appear.</li>
+		<li>After adding the game to your home screen, leave Safari and launch the "Sonic 3 A.I.R." app to set up the game.</li>
+		<li>Once the initial data download is complete, you will be prompted to select your Sonic_Knuckles_wSonic3.bin game file. This will be copied into your save data folder so you will not need to select it again later.</li>
+	</ol>
+	<div style="margin-left: auto; margin-right: auto; display:block; width: 320px;"><img src="addToHome.png" style="width: 320px;" /></div>
+	<div>After following the steps above, the game is installed.</div>
+	<br/>
+	<br/>
+	<h3>How to play in a web browser</h3>
+	<div>If you want to play the game on another device that has a modern HTML5 web browser, <a href="sonic3air_web.html">click here</a>. A browser with support for WebAssembly is required. WebAssembly is supported on all popular browsers (Chrome, Firefox, Safari, Edge) released after 2017.</div>
+</body>
+</html>

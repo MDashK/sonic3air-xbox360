@@ -1,0 +1,16 @@
+# Build outputs
+obj/
+out/
+bin/
+Release/
+Debug/
+*.pdb
+*.xdb
+*.ilk
+__pycache__/
+
+# Deployment folder (built XEX, game data, ROM, save data, logs): only the port's own config.json is tracked
+deploy/*
+!deploy/Release/
+deploy/Release/*
+!deploy/Release/config.json
